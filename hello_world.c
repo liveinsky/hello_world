@@ -20,6 +20,51 @@
 
 #define LCD_SIZE (320*240*4)
 
+ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
+{
+	printk(KERN_INFO "Hello World: read\n");
+	return 0;
+}
+
+ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff_t *offset)
+{
+	printk(KERN_INFO "Hello World: write\n");
+	return 0;
+}
+
+int hello_open(struct inode *inode, struct file *filp)
+{
+	printk(KERN_INFO "Hello World: open\n");
+	return 0;
+}
+
+int hello_release(struct inode *inode, struct file *filp)
+{
+	printk(KERN_INFO "Hello World: write\n");
+	return 0;
+}
+
+int hello_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	printk(KERN_INFO "Hello World: mmap\n");
+	return 0;
+}
+
+int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	printk(KERN_INFO "Hello World: ioctl\n");
+	return 0;
+}
+
+struct file_operations hello_fops = {
+	open:		hello_open,
+	release:	hello_release,
+	read:		hello_read,
+	write:		hello_write,
+	ioctl:		hello_ioctl,
+	mmap:		hello_mmap,
+};
+
 static int hello_module_init(void)
 {
 	printk(KERN_INFO "Hello World: init module\n");
@@ -32,6 +77,6 @@ static void hello_module_exit(void)
 }
 
 module_init(hello_module_init);
-module_exit(hwllo_module_exit);
+module_exit(hello_module_exit);
 
 MODULE_LICENSE("GPL");

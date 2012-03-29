@@ -34,7 +34,7 @@ ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff_t *off
 
 int hello_open(struct inode *inode, struct file *filp)
 {
-	printk(KERN_INFO "Hello World: open\n");
+	printk(KERN_INFO "Hello World: open (minor num = %d)\n", MINOR(inode->i_rdev));
 	return 0;
 }
 
@@ -57,6 +57,7 @@ int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsign
 }
 
 struct file_operations hello_fops = {
+	owner:		THIS_MODULE,
 	open:		hello_open,
 	release:	hello_release,
 	read:		hello_read,

@@ -80,7 +80,9 @@ static int hello_module_init(void)
 
 static void hello_module_exit(void)
 {
-	printk(KERN_INFO "Hellow World: exit module\n");
+	printk(KERN_INFO "Hello World: exit module\n");
+	
+	unregister_chrdev(DEV_MAJOR, DEV_NAME);
 }
 
 module_init(hello_module_init);

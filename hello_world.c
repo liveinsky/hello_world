@@ -68,6 +68,13 @@ struct file_operations hello_fops = {
 static int hello_module_init(void)
 {
 	printk(KERN_INFO "Hello World: init module\n");
+	
+	if(register_chrdev(DEV_MAJOR, DEV_NAME, & hello_fops) < 0)
+	{
+		printk("couldn't register device\n");
+		return -1;
+	}
+	
 	return 0;
 }
 

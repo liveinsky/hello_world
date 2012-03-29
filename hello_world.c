@@ -40,7 +40,7 @@ int hello_open(struct inode *inode, struct file *filp)
 
 int hello_release(struct inode *inode, struct file *filp)
 {
-	printk(KERN_INFO "Hello World: write\n");
+	printk(KERN_INFO "Hello World: release\n");
 	return 0;
 }
 

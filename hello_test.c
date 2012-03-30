@@ -8,11 +8,10 @@
 int main(void)
 {
 	int fd;
-	char buf[16];
 	
 	system("mknod /dev/hello c 121 3");
 	fd = open("/dev/hello", O_RDWR);
-	read(fd, buf, 16);
+	write(fd, "123", 3);
 	close(fd);
 
 	return 0;

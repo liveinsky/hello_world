@@ -18,7 +18,25 @@
 #define	DEV_MAJOR	121
 #define	DEV_NAME	"debug"
 
-#define LCD_SIZE (320*240*4)
+/* 1 pixel = 4 bytes*/
+#define LCD_PIXEL (320*240)
+#define LCD_SIZE (LCD_PIXEL*4)
+#define LCD_ADDR 0x33F00000
+
+static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
+{
+	int i=0;
+
+	if((pixel > LCD_PIXEL) || (pixel == 0))
+		pixel = LCD_PIXEL;
+
+	for(i = 0; i < pixel; i++)
+	{
+		writel(color, fb++);
+	}
+
+	return 0;
+}
 
 static ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
 {
@@ -26,9 +44,9 @@ static ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *off
 	printk(KERN_INFO "Hello World: read\n");
 	while(i++ < 5000)
 	{
-		printk(KERN_INFO "Hello World: read %d, before state = 0x%x\n", i, current->state);
+		printk(KERN_INFO "Hello World: read %d, before state = %d\n", i, (int)current->state);
 		current->state = TASK_INTERRUPTIBLE;
-		printk(KERN_INFO "Hello World: read %d, after state = 0x%x\n", i, current->state);
+		printk(KERN_INFO "Hello World: read %d, after state = %d\n", i, (int)current->state);
 		schedule();
 	}
 	return 0;
@@ -76,11 +94,17 @@ struct file_operations hello_fops = {
 
 static int hello_module_init(void)
 {
+	unsigned long *fb;
+
 	printk(KERN_INFO "Hello World: init module\n");
+	
+	/* remapping LCD PHY addr to virtual addr & reset the LCD */
+	fb = ioremap(LCD_ADDR, LCD_SIZE);
+	lcd_set(fb, 0x00ff00, 0);
 	
 	if(register_chrdev(DEV_MAJOR, DEV_NAME, & hello_fops) < 0)
 	{
-		printk("couldn't register device\n");
+		printk("couldn't register hello device\n");
 		return -1;
 	}
 	

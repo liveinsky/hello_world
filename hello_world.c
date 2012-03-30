@@ -24,6 +24,12 @@
 #define LCD_SIZE (LCD_PIXEL*4)
 #define LCD_ADDR 0x33F00000
 
+#define WHITE	0xFFFFFF
+#define RED		0xFF0000
+#define GREEN	0x00FF00
+#define BLUE	0x0000FF
+#define BLACK	0x000000
+
 struct hello_t {
 	unsigned long *fb;
 };
@@ -95,7 +101,41 @@ static int hello_mmap(struct file *filp, struct vm_area_struct *vma)
 
 static int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
 {
+	unsigned long *fb;
+	unsigned long color;
+	int pixel=0;
+	
 	printk(KERN_INFO "Hello World: ioctl\n");
+	
+	fb = ((struct hello_t *)filp->private_data)->fb;
+
+	switch(cmd)
+	{
+		case HELLO_CLEAR:
+			pixel = *((int *)arg);
+			color = WHITE;
+			break;
+		case HELLO_RED:
+			color = RED;
+			break;
+		case HELLO_GREEN:
+			color = GREEN;
+			break;
+		case HELLO_BLUE:
+			color = BLUE;
+			break;
+		case HELLO_BLACK:
+			color = BLACK;
+			break;
+		case HELLO_WHITE:
+			color = WHITE;
+			break;
+		default:
+			return -ENOTTY;
+	}
+	
+	lcd_set(fb, color, pixel);
+
 	return 0;
 }
 

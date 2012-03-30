@@ -14,6 +14,7 @@
 #include <linux/input.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
+#include "hello_ioctl.h"
 
 #define	DEV_MAJOR	121
 #define	DEV_NAME	"debug"
@@ -22,6 +23,10 @@
 #define LCD_PIXEL (320*240)
 #define LCD_SIZE (LCD_PIXEL*4)
 #define LCD_ADDR 0x33F00000
+
+struct hello_t {
+	unsigned long *fb;
+};
 
 static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
 {
@@ -60,13 +65,25 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 
 static int hello_open(struct inode *inode, struct file *filp)
 {
+	struct hello_t *hello;
+	
 	printk(KERN_INFO "Hello World: open (minor num = %d)\n", MINOR(inode->i_rdev));
+
+	hello = kmalloc(GFP_KERNEL, sizeof(struct hello_t));
+	hello->fb = ioremap(LCD_ADDR, LCD_SIZE);
+
+	filp->private_data = (void *)hello;
+
 	return 0;
 }
 
 static int hello_release(struct inode *inode, struct file *filp)
 {
+	struct hello_t *hello = (struct hello_t *)filp->private_data;
 	printk(KERN_INFO "Hello World: release\n");
+
+	kfree(hello);
+
 	return 0;
 }
 

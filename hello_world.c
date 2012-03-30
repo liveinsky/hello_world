@@ -20,7 +20,7 @@
 
 #define LCD_SIZE (320*240*4)
 
-ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
+static ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
 {
 	int i=0;
 	printk(KERN_INFO "Hello World: read\n");
@@ -34,31 +34,31 @@ ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
 	return 0;
 }
 
-ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff_t *offset)
+static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff_t *offset)
 {
 	printk(KERN_INFO "Hello World: write\n");
 	return 0;
 }
 
-int hello_open(struct inode *inode, struct file *filp)
+static int hello_open(struct inode *inode, struct file *filp)
 {
 	printk(KERN_INFO "Hello World: open (minor num = %d)\n", MINOR(inode->i_rdev));
 	return 0;
 }
 
-int hello_release(struct inode *inode, struct file *filp)
+static int hello_release(struct inode *inode, struct file *filp)
 {
 	printk(KERN_INFO "Hello World: release\n");
 	return 0;
 }
 
-int hello_mmap(struct file *filp, struct vm_area_struct *vma)
+static int hello_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	printk(KERN_INFO "Hello World: mmap\n");
 	return 0;
 }
 
-int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	printk(KERN_INFO "Hello World: ioctl\n");
 	return 0;

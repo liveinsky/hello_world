@@ -27,7 +27,7 @@ ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
 	while(i++ < 5000)
 	{
 		printk(KERN_INFO "Hello World: read %d, before state = 0x%x\n", i, current->state);
-		current->state = TASK_UNINTERRUPTIBLE;
+		current->state = TASK_INTERRUPTIBLE;
 		printk(KERN_INFO "Hello World: read %d, after state = 0x%x\n", i, current->state);
 		schedule();
 	}

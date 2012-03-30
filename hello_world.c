@@ -22,7 +22,10 @@
 
 ssize_t hello_read(struct file *filp, char *buf, size_t size, loff_t *offset)
 {
+	int i=0;
 	printk(KERN_INFO "Hello World: read\n");
+	while(i++ < 5000)
+		;
 	return 0;
 }
 

@@ -112,7 +112,8 @@ static int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	switch(cmd)
 	{
 		case HELLO_CLEAR:
-			pixel = *((int *)arg);
+			copy_from_user(&pixel, (void *)arg, sizeof(unsigned long));
+			//get_user(pixel, arg); => equal = copy_from_user()
 			color = WHITE;
 			break;
 		case HELLO_RED:

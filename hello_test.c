@@ -10,13 +10,15 @@ int main(void)
 {
 	int fd;
 	int i=200*100;
-	char buf[1];
+	unsigned char buf[4] = {0x00, 0xff, 0x00, 0xff};
 	
 	system("mknod /dev/hello c 121 3");
 	fd = open("/dev/hello", O_RDWR);
-	
-	ioctl(fd, HELLO_CLEAR, &i);
-	//ioctl(fd, HELLO_BLUE, NULL);
+
+	while(i--)
+	{
+		write(fd, buf, 4);
+	}
 	
 	close(fd);
 

@@ -148,6 +148,8 @@ static int hello_release(struct inode *inode, struct file *filp)
 	struct hello_t *hello = (struct hello_t *)filp->private_data;
 	printk(KERN_INFO "Hello World: release\n");
 
+	flush_lcd((void*) hello);
+
 	kfree(hello);
 	kfree(hello->buf);
 

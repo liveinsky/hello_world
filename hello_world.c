@@ -43,6 +43,8 @@ struct hello_t {
 
 	/* process scheduling */
 	struct timer_list	sched_timer;
+	//DECLARE_WAIT_QUEUE_HEAD(wq);
+	wait_queue_head_t wq;
 };
 
 static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
@@ -88,11 +90,11 @@ void hello_wakeup(unsigned long priv)
 {
 	struct hello_t *hello = (struct hello_t *) priv;
 	struct timer_list *sched = &hello->sched_timer;
+	wait_queue_head_t *wq = &hello->wq;
 	
-	current->state = TASK_RUNNING;
-	schedule();
+	wake_up(wq);
 
-	sched->expires = jiffies + 10*HZ;
+	sched->expires = jiffies + 5*HZ;
 	add_timer(sched);
 }
 
@@ -117,6 +119,8 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	unsigned char *pixel=NULL;
 	unsigned int index=0, i=0;
 	struct timer_list *flush_timer, *sched_timer;
+	wait_queue_head_t *wq;
+	wait_queue_t wait;
 
 	printk(KERN_INFO "Hello World: write (size = %d, buf=%x:%x:%x:%x)\n", size, buf[0], buf[1], buf[2], buf[3]);
 
@@ -127,6 +131,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	index = hello->index;
 	flush_timer = &hello->flush_timer;
 	sched_timer = &hello->sched_timer;
+	wq = &hello->wq;
 	// FIXME: unlock
 
 	for(i=0; i < size; i++)
@@ -142,10 +147,15 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 			add_timer(flush_timer);
 		
 			/* process scheduling: use kernel timer to defferred exec hello_wakeup */
-			sched_timer->expires = jiffies + 10*HZ;
+			sched_timer->expires = jiffies + 5*HZ;
 			sched_timer->function = hello_wakeup;
-			flush_timer->data = (unsigned long) hello;
+			sched_timer->data = (unsigned long) hello;
 			add_timer(sched_timer);
+
+			/* wait queue */
+			wait.flags = 0;
+			wait.task = current;
+			add_wait_queue(wq, &wait);
 repeat:
 			current->state = TASK_INTERRUPTIBLE;
 			schedule();
@@ -154,6 +164,11 @@ repeat:
 			
 			if(index != 0)
 				goto repeat;
+
+			/* remove process scheduling resource 
+			   NOTE: sched_timer NEED to del 		*/
+			remove_wait_queue(wq, &wait);
+			del_timer(sched_timer);
 		}
 		copy_from_user(&pixel[index++], &buf[i], 1);
 	}
@@ -181,6 +196,8 @@ static int hello_open(struct inode *inode, struct file *filp)
 	init_timer(&hello->flush_timer);
 	/* kernel timer for process scheduling */
 	init_timer(&hello->sched_timer);
+	/* wait queue for process scheduling */
+	init_waitqueue_head(&hello->wq);
 
 	filp->private_data = (void *)hello;
 

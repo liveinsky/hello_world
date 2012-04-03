@@ -107,7 +107,9 @@ static int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	
 	printk(KERN_INFO "Hello World: ioctl\n");
 	
+	// FIXME: lock
 	fb = ((struct hello_t *)filp->private_data)->fb;
+	// FIXME: unlock
 
 	switch(cmd)
 	{

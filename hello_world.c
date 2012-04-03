@@ -32,8 +32,11 @@
 #define BLACK	0x000000
 
 struct hello_t {
-	unsigned long *fb;
+	/* for frame buffer */
+	unsigned char *fb;
+	unsigned char *buf;
 	unsigned int index;
+	unsigned int offset;
 };
 
 static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
@@ -47,6 +50,30 @@ static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
 	{
 		writel(color, fb++);
 	}
+
+	return 0;
+}
+
+static int flush_lcd(void *priv)
+{
+	struct hello_t *hello = (struct hello_t *) priv;
+	unsigned char *fb = hello->fb;
+	unsigned char *buf = hello->buf;
+	unsigned int index = hello->index;
+	unsigned int offset = hello->offset;
+	unsigned int i=0;
+
+	printk(KERN_INFO "Hello World: flush_lcd()\n");
+	
+	for(i=0; i < index; i++)
+	{
+		if(offset >= LCD_SIZE)
+			offset = 0;
+		writeb(buf[i], &fb[offset++]);
+	}
+
+	hello->index = 0;
+	hello->offset = offset;
 
 	return 0;
 }
@@ -77,14 +104,19 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	// FIXME: lock
 	hello = (struct hello_t *)filp->private_data;
 	fb = hello->fb;
+	pixel = hello->buf;
 	index = hello->index;
 	// FIXME: unlock
 
 	for(i=0; i < size; i++)
 	{
-		if(index > LCD_SIZE)
-			index = 0;
-		copy_from_user(&fb[index++], &buf[i], 1);
+		if(index >= LCD_BUF_SIZE)
+		{
+			hello->index = index;
+			flush_lcd((void *)hello);
+			index = hello->index;
+		}
+		copy_from_user(&pixel[index++], &buf[i], 1);
 	}
 
 	// FIXME: lock
@@ -102,7 +134,9 @@ static int hello_open(struct inode *inode, struct file *filp)
 
 	hello = kmalloc(GFP_KERNEL, sizeof(struct hello_t));
 	hello->fb = ioremap(LCD_ADDR, LCD_SIZE);
+	hello->buf = kmalloc(GFP_KERNEL, LCD_BUF_SIZE);
 	hello->index = 0;
+	hello->offset = 0;
 
 	filp->private_data = (void *)hello;
 
@@ -115,6 +149,7 @@ static int hello_release(struct inode *inode, struct file *filp)
 	printk(KERN_INFO "Hello World: release\n");
 
 	kfree(hello);
+	kfree(hello->buf);
 
 	return 0;
 }
@@ -134,7 +169,7 @@ static int hello_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	printk(KERN_INFO "Hello World: ioctl\n");
 	
 	// FIXME: lock
-	fb = ((struct hello_t *)filp->private_data)->fb;
+	fb = (unsigned long *)((struct hello_t *)filp->private_data)->fb;
 	// FIXME: unlock
 
 	switch(cmd)

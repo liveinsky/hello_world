@@ -23,7 +23,7 @@
 #define LCD_PIXEL (320*240)
 #define LCD_SIZE (LCD_PIXEL*4)
 #define LCD_ADDR 0x33F00000
-#define LCD_BUF_SIZE	128
+#define LCD_BUF_SIZE	12800
 
 #define WHITE	0xFFFFFF
 #define RED		0xFF0000
@@ -62,6 +62,7 @@ static int flush_lcd(void *priv)
 	unsigned int index = hello->index;
 	unsigned int offset = hello->offset;
 	unsigned int i=0;
+	int j;
 
 	printk(KERN_INFO "Hello World: flush_lcd()\n");
 	
@@ -70,6 +71,9 @@ static int flush_lcd(void *priv)
 		if(offset >= LCD_SIZE)
 			offset = 0;
 		writeb(buf[i], &fb[offset++]);
+		
+		// for LAB
+		for(j=0; j<1000000; j++);
 	}
 
 	hello->index = 0;

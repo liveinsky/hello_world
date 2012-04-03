@@ -23,7 +23,7 @@
 #define LCD_PIXEL (320*240)
 #define LCD_SIZE (LCD_PIXEL*4)
 #define LCD_ADDR 0x33F00000
-#define LCD_BUF_SIZE	12800
+#define LCD_BUF_SIZE	128
 
 #define WHITE	0xFFFFFF
 #define RED		0xFF0000
@@ -37,6 +37,9 @@ struct hello_t {
 	unsigned char *buf;
 	unsigned int index;
 	unsigned int offset;
+
+	/* kernel scheduling */
+	struct timer_list	flush_timer;
 };
 
 static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
@@ -54,7 +57,7 @@ static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
 	return 0;
 }
 
-static int flush_lcd(void *priv)
+static int flush_lcd(unsigned long priv)
 {
 	struct hello_t *hello = (struct hello_t *) priv;
 	unsigned char *fb = hello->fb;
@@ -71,9 +74,6 @@ static int flush_lcd(void *priv)
 		if(offset >= LCD_SIZE)
 			offset = 0;
 		writeb(buf[i], &fb[offset++]);
-		
-		// for LAB
-		for(j=0; j<1000000; j++);
 	}
 
 	hello->index = 0;
@@ -102,6 +102,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	unsigned char *fb=NULL;
 	unsigned char *pixel=NULL;
 	unsigned int index=0, i=0;
+	struct timer_list *flush_timer;
 
 	printk(KERN_INFO "Hello World: write (size = %d, buf=%x:%x:%x:%x)\n", size, buf[0], buf[1], buf[2], buf[3]);
 
@@ -110,6 +111,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	fb = hello->fb;
 	pixel = hello->buf;
 	index = hello->index;
+	flush_timer = &hello->flush_timer;
 	// FIXME: unlock
 
 	for(i=0; i < size; i++)
@@ -117,8 +119,20 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 		if(index >= LCD_BUF_SIZE)
 		{
 			hello->index = index;
-			flush_lcd((void *)hello);
+			
+			/* kernel scheduling: use kernel timer to defferred exec flush_lcd */
+			flush_timer->expires = jiffies + 1*HZ;
+			flush_timer->function = flush_lcd;
+			flush_timer->data = (unsigned long) hello;
+			add_timer(flush_timer);
+		
+repeat:
+			// process scheduleing
+			
 			index = hello->index;
+			
+			if(index != 0)
+				goto repeat;
 		}
 		copy_from_user(&pixel[index++], &buf[i], 1);
 	}
@@ -141,6 +155,8 @@ static int hello_open(struct inode *inode, struct file *filp)
 	hello->buf = kmalloc(GFP_KERNEL, LCD_BUF_SIZE);
 	hello->index = 0;
 	hello->offset = 0;
+	/* kernel timer */
+	init_timer(&hello->flush_timer);
 
 	filp->private_data = (void *)hello;
 
@@ -150,9 +166,13 @@ static int hello_open(struct inode *inode, struct file *filp)
 static int hello_release(struct inode *inode, struct file *filp)
 {
 	struct hello_t *hello = (struct hello_t *)filp->private_data;
+	struct timer_list *flush_timer = &hello->flush_timer;
 	printk(KERN_INFO "Hello World: release\n");
 
-	flush_lcd((void*) hello);
+	flush_lcd((unsigned long) hello);
+
+	/* kernel timer */
+	del_timer(flush_timer);
 
 	kfree(hello);
 	kfree(hello->buf);

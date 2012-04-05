@@ -12,14 +12,18 @@ int main(void)
 	int i=200*100;
 	unsigned char buf[4] = {0x00, 0xff, 0x00, 0xff};
 	
-	system("mknod /dev/hello c 121 3");
+	/* manully mknod for mmap() test to check /proc/<PID>/maps */
+	//system("mknod /dev/hello c 121 3");
 	fd = open("/dev/hello", O_RDWR);
+
+	mmap(0, 1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	sleep(30);
 
 	while(i--)
 	{
-		write(fd, buf, 4);
+		//write(fd, buf, 4);
 	}
-	
+
 	close(fd);
 
 	return 0;

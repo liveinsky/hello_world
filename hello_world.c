@@ -71,7 +71,7 @@ static int flush_lcd(unsigned long priv)
 	unsigned int offset = hello->offset;
 	unsigned int i=0;
 
-	printk(KERN_INFO "Hello World: flush_lcd()\n");
+	//printk(KERN_INFO "Hello World: flush_lcd()\n");
 	
 	for(i=0; i < index; i++)
 	{
@@ -122,7 +122,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	wait_queue_head_t *wq;
 	wait_queue_t wait;
 
-	printk(KERN_INFO "Hello World: write (size = %d, buf=%x:%x:%x:%x)\n", size, buf[0], buf[1], buf[2], buf[3]);
+	//printk(KERN_INFO "Hello World: write (size = %d, buf=%x:%x:%x:%x)\n", size, buf[0], buf[1], buf[2], buf[3]);
 
 	// FIXME: lock
 	hello = (struct hello_t *)filp->private_data;
@@ -225,7 +225,12 @@ static int hello_release(struct inode *inode, struct file *filp)
 
 static int hello_mmap(struct file *filp, struct vm_area_struct *vma)
 {
+	/* If not implement the page table remap, the vma->vm_start & vma->vm_end
+		are not in the /proc/<PID>/maps.										*/
+
 	printk(KERN_INFO "Hello World: mmap\n");
+	printk("start addr = 0x%08x\n", vma->vm_start);
+	printk("end addr = 0x%08x\n", vma->vm_end);
 	return 0;
 }
 

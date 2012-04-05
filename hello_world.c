@@ -247,7 +247,14 @@ static int hello_mmap(struct file *filp, struct vm_area_struct *vma)
 	/* for the general case (remapped base on PAGE_SIZE) */
 	while(size > 0)
 	{
+#if 1	// kernel 2.4 or kernel 2.6
+		/* kernel 2.4, no handle user sapce page table */
 		remap_page_range(from, to, PAGE_SIZE, PAGE_SHARED);
+#else
+		/* kernel 2.6 have handle user page table */
+		//remap_pfn_range(vma, vma->vm_start, __pa(kvirt) >> PAGE_SHIFT, PAGE_SIZE, vma->vm_page_prot);
+		remap_pfn_range(vma, from, to, PAGE_SIZE, vma->vm_page_prot);
+#endif
 
 		from += PAGE_SIZE;
 		to += PAGE_SIZE;

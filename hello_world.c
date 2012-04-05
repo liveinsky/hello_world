@@ -228,9 +228,33 @@ static int hello_mmap(struct file *filp, struct vm_area_struct *vma)
 	/* If not implement the page table remap, the vma->vm_start & vma->vm_end
 		are not in the /proc/<PID>/maps.										*/
 
+	unsigned long from;
+	unsigned long to;
+	unsigned long size;
+
 	printk(KERN_INFO "Hello World: mmap\n");
 	printk("start addr = 0x%08x\n", vma->vm_start);
 	printk("end addr = 0x%08x\n", vma->vm_end);
+
+	from = vma->vm_start;
+	to = 0x33f00000;	// frame buffer physical address
+	size = vma->vm_end - vma->vm_start;
+
+#if 0
+	/* only for the reserved area is continued */
+	remap_page_range(from, to, size, PAGE_SHARED);
+#else
+	/* for the general case (remapped base on PAGE_SIZE) */
+	while(size > 0)
+	{
+		remap_page_range(from, to, PAGE_SIZE, PAGE_SHARED);
+
+		from += PAGE_SIZE;
+		to += PAGE_SIZE;
+		size -= PAGE_SIZE;
+	}
+#endif
+
 	return 0;
 }
 

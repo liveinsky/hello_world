@@ -18,10 +18,29 @@
 void hello_bh(unsigned long);
 DECLARE_TASKLET(my_tasklet, hello_bh, NULL);
 
+struct input_dev ts_input;
+int x;
+int y;
+
+static int ts_input_open(struct input_dev *dev)
+{
+	input_report_abs(dev, ABS_X, x);
+	input_report_abs(dev, ABS_Y, y);
+	return 0;
+}
+
+static void ts_input_close(struct input_dev *dev)
+{
+}
+
 void hello_ts_handler(int irq, void *priv, struct pt_regs *reg)
 {
 	printk(KERN_INFO "data_ts: down...\n");
-	
+
+	/* FIXME: read(x,y) from ADC */
+	x = 100;
+	y = 100;
+
 	tasklet_schedule(&my_tasklet);
 }
 
@@ -49,8 +68,16 @@ static int hello_ts_open(struct inode *inode, struct file *filp)
 	  	return -1;
 	}
 
-	return 0;
+	/* handling input device */
+	ts_input.name = "hello-ts";
+	ts_input.open = ts_input_open;
+	ts_input.close = ts_input_close;
+	// capabilities
+	ts_input.absbit[0] = BIT(ABS_X) | BIT(ABS_Y);
 
+	input_register_device(&ts_input);
+
+	return 0;
 }
 
 static ssize_t hello_ts_read(struct file *filp, char *buf, size_t size, loff_t *off)
@@ -84,8 +111,9 @@ static struct file_operations hello_ts_fops = {
   	ioctl:    hello_ts_ioctl,
 };
 
+/* NOTE: HELLO_TS_MINOR should be defined in miscdevice.h */
 static struct miscdevice hello_ts_misc = {
-  	minor:    CDATA_TS_MINOR,
+  	minor:    HELLO_TS_MINOR,
   	name:    "hello-ts",
   	fops:    &hello_ts_fops,
 };

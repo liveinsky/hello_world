@@ -15,10 +15,19 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
+void hello_bh(unsigned long);
+DECLARE_TASKLET(my_tasklet, hello_bh, NULL);
 
 void hello_ts_handler(int irq, void *priv, struct pt_regs *reg)
 {
 	printk(KERN_INFO "data_ts: down...\n");
+	
+	tasklet_schedule(&my_tasklet);
+}
+
+void hello_bh(unsigned long prive)
+{
+	printk(KERN_INFO "bh: ...\n");
 }
 
 static int hello_ts_open(struct inode *inode, struct file *filp)

@@ -9,22 +9,41 @@
 int main(void)
 {
 	int fd;
-	int i=256;
+	int i=200*100;
 	int *addr;
+	pid_t pid;
 	unsigned char buf[4] = {0x00, 0xff, 0x00, 0xff};
 	
 	/* manully mknod for mmap() test to check /proc/<PID>/maps */
 	//system("mknod /dev/hello c 121 3");
 	fd = open("/dev/hello", O_RDWR);
-
-	addr = mmap(0, 1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	sleep(30);
-
-	while(i--)
+	/* step.1 open(), step.2 fork() => parent & child use the same struct file
+	   step.1 fork(), step.2 open() => parent & child use the differnet struct files */
+	pid = fork();
+	
+	if(pid == 0)
 	{
-		//write(fd, buf, 4);
-		memcpy(&addr[i], buf, 4);
+		buf[0] = 0x00;
+		buf[1] = 0x00;
+		buf[2] = 0x00;
+
+		while(i--)
+		{
+			write(fd, buf, 4);
+		}
 	}
+	else
+	{
+		buf[0] = 0xff;
+		buf[1] = 0x00;
+		buf[2] = 0x00;
+
+		while(i--)
+		{
+			write(fd, buf, 4);
+		}
+	}
+
 
 	close(fd);
 

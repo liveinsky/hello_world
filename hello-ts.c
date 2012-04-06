@@ -18,14 +18,14 @@
 void hello_bh(unsigned long);
 DECLARE_TASKLET(my_tasklet, hello_bh, NULL);
 
-struct input_dev ts_input;
-int x;
-int y;
+struct hello_ts {
+	struct input_dev ts_input;
+	int x;
+	int y;
+};
 
 static int ts_input_open(struct input_dev *dev)
 {
-	input_report_abs(dev, ABS_X, x);
-	input_report_abs(dev, ABS_Y, y);
 	return 0;
 }
 
@@ -35,22 +35,36 @@ static void ts_input_close(struct input_dev *dev)
 
 void hello_ts_handler(int irq, void *priv, struct pt_regs *reg)
 {
+	struct hello_ts *hello = (struct hello_ts *)priv;
+
 	printk(KERN_INFO "data_ts: down...\n");
 
 	/* FIXME: read(x,y) from ADC */
-	x = 100;
-	y = 100;
+	hello->x = 100;
+	hello->y = 100;
+
+	my_tasklet.data = (unsigned long) hello;
 
 	tasklet_schedule(&my_tasklet);
 }
 
 void hello_bh(unsigned long prive)
 {
+	struct hello_ts *hello = (struct hello_ts *)prive;
+	struct input_dev *dev = &hello->ts_input;
+
 	printk(KERN_INFO "bh: ...\n");
+
+	input_report_abs(dev, ABS_X, hello->x);
+	input_report_abs(dev, ABS_Y, hello->y);
 }
 
 static int hello_ts_open(struct inode *inode, struct file *filp)
 {
+	struct hello_ts *hello;
+
+	hello = kmalloc(sizeof(struct hello_ts), GFP_KERNEL);
+
 	set_gpio_ctrl(GPIO_YPON);
 	set_gpio_ctrl(GPIO_YMON);
 	set_gpio_ctrl(GPIO_XPON);
@@ -63,19 +77,24 @@ static int hello_ts_open(struct inode *inode, struct file *filp)
 
 	/* Request touch panel IRQ */
 	if (request_irq(IRQ_TC, hello_ts_handler, 0, 
-	"hello-ts", 0)) {
+	"hello-ts", (void *)hello)) {
 		printk(KERN_ALERT "hello: request irq failed.\n");
 	  	return -1;
 	}
 
 	/* handling input device */
-	ts_input.name = "hello-ts";
-	ts_input.open = ts_input_open;
-	ts_input.close = ts_input_close;
+	hello->ts_input.name = "hello-ts";
+	hello->ts_input.open = ts_input_open;
+	hello->ts_input.close = ts_input_close;
 	// capabilities
-	ts_input.absbit[0] = BIT(ABS_X) | BIT(ABS_Y);
+	hello->ts_input.absbit[0] = BIT(ABS_X) | BIT(ABS_Y);
 
-	input_register_device(&ts_input);
+	input_register_device(&hello->ts_input);
+	
+	hello->x = 0;
+	hello->y = 0;
+
+	filp->private_data = (void *) hello;
 
 	return 0;
 }

@@ -152,7 +152,8 @@ int hello_ts_init_module(void)
 void hello_ts_cleanup_module(void)
 
 {
-	misc_register(&hello_ts_misc);
+	printk(KERN_INFO "Hello-TS: hello_ts_cleanup_module\n");
+	misc_deregister(&hello_ts_misc);
 }
 
 module_init(hello_ts_init_module);

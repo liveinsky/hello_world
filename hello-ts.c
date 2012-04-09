@@ -140,11 +140,11 @@ static struct miscdevice hello_ts_misc = {
 int hello_ts_init_module(void)
 {
 	if (misc_register(&hello_ts_misc) < 0) {
-	  	printk(KERN_INFO "CDATA-TS: can't register driver\n");
+	  	printk(KERN_INFO "Hello-TS: can't register driver\n");
 	  	return -1;
 	}
 
-	printk(KERN_INFO "CDATA-TS: hello_ts_init_module\n");
+	printk(KERN_INFO "Hello-TS: hello_ts_init_module\n");
 
 	return 0;
 }

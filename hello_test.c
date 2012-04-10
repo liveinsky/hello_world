@@ -15,7 +15,7 @@ int main(void)
 	unsigned char buf[4] = {0x00, 0xff, 0x00, 0xff};
 	
 	/* manully mknod for mmap() test to check /proc/<PID>/maps */
-	//system("mknod /dev/hello c 121 3");
+	system("mknod /dev/hello c 121 3");
 	fd = open("/dev/hello", O_RDWR);
 	/* step.1 open(), step.2 fork() => parent & child use the same struct file
 	   step.1 fork(), step.2 open() => parent & child use the differnet struct files */

@@ -12,6 +12,7 @@
 #include <linux/irq.h>
 #include <linux/miscdevice.h>
 #include <linux/input.h>
+#include <asm-arm/semaphore.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include "hello_ioctl.h"
@@ -45,6 +46,9 @@ struct hello_t {
 	struct timer_list	sched_timer;
 	//DECLARE_WAIT_QUEUE_HEAD(wq);
 	wait_queue_head_t wq;
+
+	/* semaphore */
+	struct semaphore sem;
 };
 
 static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
@@ -62,7 +66,7 @@ static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
 	return 0;
 }
 
-static int flush_lcd(unsigned long priv)
+static void flush_lcd(unsigned long priv)
 {
 	struct hello_t *hello = (struct hello_t *) priv;
 	unsigned char *fb = hello->fb;
@@ -124,21 +128,26 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 
 	//printk(KERN_INFO "Hello World: write (size = %d, buf=%x:%x:%x:%x)\n", size, buf[0], buf[1], buf[2], buf[3]);
 
-	// FIXME: lock
 	hello = (struct hello_t *)filp->private_data;
+	
+	down_interruptible(&hello->sem);
+	
 	fb = hello->fb;
 	pixel = hello->buf;
 	index = hello->index;
 	flush_timer = &hello->flush_timer;
 	sched_timer = &hello->sched_timer;
 	wq = &hello->wq;
-	// FIXME: unlock
+	
+	up(&hello->sem);
 
 	for(i=0; i < size; i++)
 	{
 		if(index >= LCD_BUF_SIZE)
 		{
+			down_interruptible(&hello->sem);
 			hello->index = index;
+			up(&hello->sem);
 			
 			/* kernel scheduling: use kernel timer to defferred exec flush_lcd */
 			flush_timer->expires = jiffies + 1*HZ;
@@ -148,7 +157,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 		
 			/* process scheduling: use kernel timer to defferred exec hello_wakeup */
 			sched_timer->expires = jiffies + 5*HZ;
-			sched_timer->function = hello_wakeup;
+			sched_timer->function =  hello_wakeup;
 			sched_timer->data = (unsigned long) hello;
 			add_timer(sched_timer);
 
@@ -160,7 +169,9 @@ repeat:
 			current->state = TASK_INTERRUPTIBLE;
 			schedule();
 
+			down_interruptible(&hello->sem);
 			index = hello->index;
+			up(&hello->sem);
 			
 			if(index != 0)
 				goto repeat;
@@ -173,9 +184,9 @@ repeat:
 		copy_from_user(&pixel[index++], &buf[i], 1);
 	}
 
-	// FIXME: lock
+	down_interruptible(&hello->sem);
 	hello->index = index;
-	// FIXME: unlock
+	up(&hello->sem);
 
 	return 0;
 }
@@ -198,6 +209,8 @@ static int hello_open(struct inode *inode, struct file *filp)
 	init_timer(&hello->sched_timer);
 	/* wait queue for process scheduling */
 	init_waitqueue_head(&hello->wq);
+	/* semaphore */
+	sema_init(&hello->sem, 1);
 
 	filp->private_data = (void *)hello;
 
@@ -233,8 +246,8 @@ static int hello_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long size;
 
 	printk(KERN_INFO "Hello World: mmap\n");
-	printk("start addr = 0x%08x\n", vma->vm_start);
-	printk("end addr = 0x%08x\n", vma->vm_end);
+	printk("start addr = %p\n", vma->vm_start);
+	printk("end addr = %p\n", vma->vm_end);
 
 	from = vma->vm_start;
 	to = 0x33f00000;	// frame buffer physical address

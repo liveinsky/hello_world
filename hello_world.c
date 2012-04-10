@@ -12,6 +12,7 @@
 #include <linux/irq.h>
 #include <linux/miscdevice.h>
 #include <linux/input.h>
+#include <linux/spinlock.h>
 #include <asm-arm/semaphore.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -49,6 +50,9 @@ struct hello_t {
 
 	/* semaphore */
 	struct semaphore sem;
+
+	/* spinlock */
+	spinlock_t	lock;
 };
 
 static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
@@ -69,13 +73,22 @@ static int lcd_set(unsigned long *fb, unsigned long color, int pixel)
 static void flush_lcd(unsigned long priv)
 {
 	struct hello_t *hello = (struct hello_t *) priv;
-	unsigned char *fb = hello->fb;
-	unsigned char *buf = hello->buf;
-	unsigned int index = hello->index;
-	unsigned int offset = hello->offset;
+	unsigned char *fb;
+	unsigned char *buf;
+	unsigned int index;
+	unsigned int offset;
 	unsigned int i=0;
 
 	//printk(KERN_INFO "Hello World: flush_lcd()\n");
+
+	spin_lock(&hello->lock);
+	
+	fb = hello->fb;
+	buf = hello->buf;
+	index = hello->index;
+	offset = hello->offset;
+	
+	spin_unlock(&hello->lock);
 	
 	for(i=0; i < index; i++)
 	{
@@ -130,16 +143,16 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 
 	hello = (struct hello_t *)filp->private_data;
 	
-	down_interruptible(&hello->sem);
-	
+	down_interruptible(&hello->sem); 	/* semaphore */
+	spin_lock(&hello->lock);			/* spinlock */
 	fb = hello->fb;
 	pixel = hello->buf;
 	index = hello->index;
+	spin_unlock(&hello->lock);			/* spinlock */
 	flush_timer = &hello->flush_timer;
 	sched_timer = &hello->sched_timer;
 	wq = &hello->wq;
-	
-	up(&hello->sem);
+	up(&hello->sem);					/* semaphore */
 
 	for(i=0; i < size; i++)
 	{
@@ -211,6 +224,8 @@ static int hello_open(struct inode *inode, struct file *filp)
 	init_waitqueue_head(&hello->wq);
 	/* semaphore */
 	sema_init(&hello->sem, 1);
+	/* spinlock */
+	spin_lock_init(&hello->lock);
 
 	filp->private_data = (void *)hello;
 

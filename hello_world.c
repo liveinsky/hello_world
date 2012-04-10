@@ -144,11 +144,11 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	hello = (struct hello_t *)filp->private_data;
 	
 	down_interruptible(&hello->sem); 	/* semaphore */
-	spin_lock_irqsave(&hello->lock, flags);		/* spinlock */
+	spin_lock_irqsave(&hello->lock, flags);			/* spinlock */
 	fb = hello->fb;
 	pixel = hello->buf;
 	index = hello->index;
-	spin_unlock_irqsave(&hello->lock, flags);	/* spinlock */
+	spin_unlock_irqrestore(&hello->lock, flags);	/* spinlock */
 	flush_timer = &hello->flush_timer;
 	sched_timer = &hello->sched_timer;
 	wq = &hello->wq;

@@ -100,7 +100,6 @@ static void flush_lcd(unsigned long priv)
 	hello->index = 0;
 	hello->offset = offset;
 
-	return 0;
 }
 
 void hello_wakeup(unsigned long priv)
@@ -135,6 +134,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	unsigned char *fb=NULL;
 	unsigned char *pixel=NULL;
 	unsigned int index=0, i=0;
+	unsigned long flags;
 	struct timer_list *flush_timer, *sched_timer;
 	wait_queue_head_t *wq;
 	wait_queue_t wait;
@@ -144,11 +144,11 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 	hello = (struct hello_t *)filp->private_data;
 	
 	down_interruptible(&hello->sem); 	/* semaphore */
-	spin_lock(&hello->lock);			/* spinlock */
+	spin_lock_irqsave(&hello->lock, flags);		/* spinlock */
 	fb = hello->fb;
 	pixel = hello->buf;
 	index = hello->index;
-	spin_unlock(&hello->lock);			/* spinlock */
+	spin_unlock_irqsave(&hello->lock, flags);	/* spinlock */
 	flush_timer = &hello->flush_timer;
 	sched_timer = &hello->sched_timer;
 	wq = &hello->wq;

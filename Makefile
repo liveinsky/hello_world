@@ -1,6 +1,6 @@
 # for test
 
-obj-m := hello_2.6.o
+obj-m := hello_dev_class.o
 
 KDIR := /lib/modules/${shell uname -r}/build
 PWD := ${shell pwd}

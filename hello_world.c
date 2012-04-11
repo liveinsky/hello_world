@@ -180,6 +180,7 @@ static ssize_t hello_write(struct file *filp, const char *buf, size_t size, loff
 			add_wait_queue(wq, &wait);
 repeat:
 			current->state = TASK_INTERRUPTIBLE;
+			smp_mb();
 			schedule();
 
 			down_interruptible(&hello->sem);

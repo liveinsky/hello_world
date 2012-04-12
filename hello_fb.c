@@ -325,11 +325,11 @@ struct file_operations hello_fb_fops = {
 
 static struct miscdevice hello_fb_misc = {
 	minor: HELLO_FB_MINOR,
-	name: "hello_fb"
+	name: "hello_fb",
 	fops: &hello_fb_fops,
 };
 
-static int __init hello_fb_probe(struct platform_device *pdev)
+static int hello_fb_probe(struct platform_device *pdev)
 {
     if (misc_register(&hello_fb_misc) < 0) {
 		printk(KERN_INFO "hello_fb: platform prob failed.\n");
@@ -341,9 +341,17 @@ static int __init hello_fb_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int hello_fb_remove(struct platform_device *pdev)
+{
+	printk(KERN_INFO "hello_fb: platform remove.\n");
+	misc_deregister(&hello_fb_misc);
+	
+	return 0;	
+}
+
 static struct platform_driver hello_fb_driver = {
 	.probe = hello_fb_probe,
-//	.remove = hello_fb_remove,
+	.remove = hello_fb_remove,
 //	.suspend = hello_fb_suspend,
 //	.resume = hello_fb_resume,
 	.driver = {
@@ -351,7 +359,6 @@ static struct platform_driver hello_fb_driver = {
 				.owner = THIS_MODULE,
 			},
 };
-
 
 static int hello_fb_module_init(void)
 {
@@ -373,8 +380,6 @@ static void hello_fb_module_exit(void)
 	printk(KERN_INFO "Hello fb: exit module\n");
 	
 	destroy_workqueue(hello_wq);
-
-	misc_deregister(&hello_fb_misc);
 }
 
 module_init(hello_fb_module_init);
